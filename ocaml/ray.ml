@@ -300,14 +300,14 @@ let image2ppm : image -> string = fun image ->
   ]
 
 let render objs width height cam : image =
-  let pixel l () =
-    let i = l mod width in
-    let j = height - l / width 
-    in colour_to_pixel (trace_ray objs width height cam j i) in
-  let make_pixel_task l = Domain.spawn @@ pixel l in
+  let pixel j i = colour_to_pixel (trace_ray objs width height cam j i) in
+  let row j = List.init width (pixel j) in
+  let make_row_task j = Domain.spawn @@ (fun () -> row j) in
   let pixels =
-    Array.init (height * width) make_pixel_task
-    |> Array.map Domain.join
+    List.init height make_row_task
+    |> List.map Domain.join
+    |> List.flatten
+    |> Array.of_list
   in
   {
     width = width;
